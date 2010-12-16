@@ -25,13 +25,9 @@ two well-known evolutionary multi-objective algorithms.
 Our implementation is based on the optimisation framework ParadisEO-MOEO [1]. 
 We extended the sources proposed in [2] to support the 5  above explained objectives.
 
-'1' Liefooghe, A., Jourdan, L., Talbi, E.: A Unified Model for Evolutionary Multi-objective 
-Optimization and its Implementation in a General Purpose Software Framework: ParadisEO-MOEO. 
-Research Report RR-6906, INRIA (2009)
+	[1] Liefooghe, A., Jourdan, L., Talbi, E.: A Unified Model for Evolutionary Multi-objective Optimization and its Implementation in a General Purpose Software Framework: ParadisEO-MOEO. Research Report RR-6906, INRIA (2009)
 
-'2' LaTorre, A., Clautiaux, F., Talbi, E., Peña, J.: VRP-extended: When confidence
-and fleet size are also important. In: Talbi, E.G. (ed.) Proceedings of the 2nd International 
-Conference on Metaheuristics and Nature Inspired Computing, META 2008 (2008)
+	[2] LaTorre, A., Clautiaux, F., Talbi, E., Peña, J.: VRP-extended: When confidence and fleet size are also important. In: Talbi, E.G. (ed.) Proceedings of the 2nd International Conference on Metaheuristics and Nature Inspired Computing, META 2008 (2008)
 
 Paradiseo and original (C)VRPTW implementation can be found in:
 http://paradiseo.gforge.inria.fr/
@@ -41,21 +37,21 @@ http://paradiseo.gforge.inria.fr/
 1. Get Qmake: http://en.wikipedia.org/wiki/Qt_(framework)
 2. Get Paradiseo: http://paradiseo.gforge.inria.fr/
 3. In the folder containing the source run:
-qmake -project
+	qmake -project
 4. Edit the resulting .pro file and set the following path according to Paradiseo's path.
 For example:
 
-INCLUDEPATH += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src/utils /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src/utils
+	INCLUDEPATH += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src/utils /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src/utils
 
-LIBS += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/build/lib/libmoeo.a /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeo.a /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeoutils.a
+	LIBS += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/build/lib/libmoeo.a /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeo.a /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeoutils.a
 
 An example can be downloaded from here:
 http://dl.dropbox.com/u/4581572/MOVRPTW-Paradiseo.pro
 
 5. Generate Makefile running:
-qmake
+	qmake
 6. And then compile using:
-make
+	make
 
 == Running the code
 
@@ -70,7 +66,7 @@ In order to run the binary file, you must provide:
  
 Example: 
 
-./MOVRPTW-Paradiseo moeoNSGAII solomonData.dat distanceMatrixData.dat timeMatrixData.dat 20 1000 0
+	./MOVRPTW-Paradiseo moeoNSGAII solomonData.dat distanceMatrixData.dat timeMatrixData.dat 20 1000 0
 
 == Contribute
 
