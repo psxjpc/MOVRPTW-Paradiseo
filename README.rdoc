@@ -1,6 +1,5 @@
 
-= MOVRPTW-Paradiseo - Multi-objective Vehicle Routing Problem with Time Windows implementation
-using Paradiseo-MOEO.
+= MOVRPTW-Paradiseo - Multi-objective Vehicle Routing Problem with Time Windows implementation on Paradiseo-MOEO.
 
 == Introduction
 
@@ -42,7 +41,7 @@ http://paradiseo.gforge.inria.fr/
 1. Get Qmake: http://en.wikipedia.org/wiki/Qt_(framework)
 2. Get Paradiseo: http://paradiseo.gforge.inria.fr/
 3. In the folder containing the source run:
-	qmake -project
+qmake -project
 4. Edit the resulting .pro file and set the following path according to Paradiseo's path.
 For example:
 
@@ -54,9 +53,9 @@ An example can be downloaded from here:
 http://dl.dropbox.com/u/4581572/MOVRPTW-Paradiseo.pro
 
 5. Generate Makefile running:
-    qmake
+qmake
 6. And then compile using:
-	make
+make
 
 == Running the code
 
@@ -71,7 +70,7 @@ In order to run the binary file, you must provide:
  
 Example: 
 
-MOVRPTW-Paradiseo moeoNSGAII solomonData.dat distanceMatrixData.dat timeMatrixData.dat 20 1000 0
+./MOVRPTW-Paradiseo moeoNSGAII solomonData.dat distanceMatrixData.dat timeMatrixData.dat 20 1000 0
 
 == Contribute
 
