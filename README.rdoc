@@ -45,12 +45,12 @@ http://paradiseo.gforge.inria.fr/
 4. Edit the resulting .pro file and set the following path according to Paradiseo's path.
 For example:
 
-	INCLUDEPATH += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src 
-	/opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src/utils /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src 
+	INCLUDEPATH += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src \
+	/opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src/utils /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src \
 	/opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src/utils
 
-	LIBS += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/build/lib/libmoeo.a 
-	/opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeo.a 
+	LIBS += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/build/lib/libmoeo.a \
+	/opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeo.a \
 	/opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeoutils.a
 
 An example can be downloaded from here:
