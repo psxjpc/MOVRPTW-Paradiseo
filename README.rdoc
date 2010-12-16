@@ -1,0 +1,118 @@
+
+= MOVRPTW-Paradiseo - Multi-objective Vehicle Routing Problem with Time Windows implementation
+using Paradiseo-MOEO.
+
+== Introduction
+
+The VRPTW is a well known combinatorial problem that consists of
+creating the best set of  routes to serve a number of costumers. In
+order to serve these costumers, a fleet of vehicles depart from a
+central depot that counts with an unlimited amount of goods. Each
+vehicle within the fleet has a maximum capacity that must not be
+exceeded. Costumers have a time window in which they may be served.
+Also, they have associated a service time, which is the actual time that
+the delivery takes once the vehicle arrives at a costumer location.
+
+Our benchmark, compatible with this implementation, can be downloaded from:
+http://dl.dropbox.com/u/4581572/movrptw-instances.zip
+
+We work with 5 minimisation objectives using the proposed benchmark
+datasets in order to assess the quality of each route-plan: (1) number
+of vehicles needed to serve all costumers, (2) total travel distance,
+(3) total travel time, (4) total waiting time, and (5) total delay time.
+This implementation is designed to compared the performance of NSGA-II and MOGA, 
+two well-known evolutionary multi-objective algorithms.
+
+Our implementation is based on the optimisation framework ParadisEO-MOEO [1]. 
+We extended the sources proposed in [2] to support the 5  above explained objectives.
+
+[1] Liefooghe, A., Jourdan, L., Talbi, E.: A Unified Model for Evolutionary Multi-objective 
+Optimization and its Implementation in a General Purpose Software Framework: ParadisEO-MOEO. 
+Research Report RR-6906, INRIA (2009)
+
+[2] LaTorre, A., Clautiaux, F., Talbi, E., Peña, J.: VRP-extended: When confidence
+and fleet size are also important. In: Talbi, E.G. (ed.) Proceedings of the 2nd International 
+Conference on Metaheuristics and Nature Inspired Computing, META 2008 (2008)
+
+Paradiseo and original (C)VRPTW implementation can be found in:
+http://paradiseo.gforge.inria.fr/
+
+== Compiling the code
+
+1. Get Qmake: http://en.wikipedia.org/wiki/Qt_(framework)
+2. Get Paradiseo: http://paradiseo.gforge.inria.fr/
+3. In the folder containing the source run:
+	qmake -project
+4. Edit the resulting .pro file and set the following path according to Paradiseo's path.
+For example:
+
+# Paradiseo
+INCLUDEPATH += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src \
+   /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src/utils \
+   /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src \
+   /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src/utils
+
+LIBS += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/build/lib/libmoeo.a \
+        /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeo.a \
+        /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeoutils.a
+
+So it should look something like:
+
+# VRPTW - MO
+QT       += core
+QT       -= gui
+CONFIG   += console
+
+# We don't want to have this app in a bundle
+CONFIG -= app_bundle
+CONFIG += warn_off
+
+TEMPLATE = app
+TARGET = 
+DEPENDPATH += . application src
+INCLUDEPATH += . src
+
+# Paradiseo
+INCLUDEPATH += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src \
+   /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/src/utils \
+   /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src \
+   /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/src/utils
+
+LIBS += /opt/paradiseo/paradiseo-1.2.1/paradiseo-moeo/build/lib/libmoeo.a \
+        /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeo.a \
+        /opt/paradiseo/paradiseo-1.2.1/paradiseo-eo/build/lib/libeoutils.a
+
+# Input
+HEADERS += \
+    src/moeoVRP.h \
+    src/moeoVRPEvalFunc.h \
+    src/moeoVRPUtils.h \
+    src/moeoVRPStat.h \
+    src/moeoVRPQuadCrossover.h \
+    src/moeoVRPMutation.h \
+    src/moeoVRPInit.h \
+    src/moeoVRPObjectiveVectorTraits.h \
+    src/doMakes.h
+SOURCES += application/CVRP-TW.cpp
+
+5. Generate Makefile running:
+    qmake
+6. And then compile using:
+	make
+
+== Running the code
+
+In order to run the binary file, you must provide:
+ - algorithm: moeoNSGAII, moeoMOGA
+ - file containig the (solomon-like) data of the problem
+ - file containig the distance matrices of the problem
+ - file containig the time matrices of the problem
+ - size of population
+ - number of generations
+ - seed
+Example: ./<binary_file> moeoNSGAII solomonData.dat distanceMatrixData.dat timeMatrixData.dat 20 1000 0
+
+== Contribute
+
+If you want to contribute, please contact me at:
+jpcastrog@gmail.com
