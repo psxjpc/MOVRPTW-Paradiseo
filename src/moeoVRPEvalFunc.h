@@ -108,7 +108,8 @@ public:
         moeoVRPObjectiveVector objVector;
         objVector[0] = sizeOfFleet(_moeo);
         objVector[1] = travelDistance(_moeo);
-        objVector[2] = travelTime(_moeo);
+        //objVector[2] = travelTime(_moeo);
+        objVector[2] = makespan(_moeo);
         objVector[3] = waitingTime(_moeo);
         objVector[4] = delayTime(_moeo);
         _moeo.objectiveVector(objVector);
@@ -186,6 +187,43 @@ public:
         }
         return totalElapsedTime;
     }
+
+    /**
+      * \brief Computes the travel time of the individual.
+      * \param _moeo The individual to be evaluated.
+      */
+    double makespan(const moeoVRP& _moeo) const
+    {
+        double elapsedTime = 0.0, totalElapsedTime = 0.0;
+        double readyTime = 0.0, dueTime = 0.0, serviceTime = 0.0;
+        unsigned previous = 0, current = 0;
+
+        for (size_t i = 0; i < _moeo.routes().size(); i++)
+        {
+            // Departing from the depot
+            previous = 0;
+
+            for (size_t j = 0; j < _moeo.routes()[i].size(); j++)
+            {
+                current = _moeo.routes()[i][j];
+                moeoVRPUtils::getTimeWindow (current, readyTime, dueTime, serviceTime);
+                elapsedTime += std::max( moeoVRPUtils::elapsedTime(previous, current) , readyTime);
+                previous = current;
+                elapsedTime += serviceTime;
+            }
+
+            // Returning to the depot
+            current = 0;
+            elapsedTime += moeoVRPUtils::elapsedTime(previous, current);
+
+            if (elapsedTime > totalElapsedTime)
+               totalElapsedTime = elapsedTime;
+
+            elapsedTime = 0.0;
+        }
+        return totalElapsedTime;
+    }
+
 
     /**
       * \brief Computes the total waiting time of the individual.
