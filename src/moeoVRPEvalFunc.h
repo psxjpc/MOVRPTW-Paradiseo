@@ -173,7 +173,7 @@ public:
             {
                 current = _moeo.routes()[i][j];
                 moeoVRPUtils::getTimeWindow (current, readyTime, dueTime, serviceTime);
-                elapsedTime += std::max( moeoVRPUtils::elapsedTime(previous, current) , readyTime);
+                elapsedTime = std::max(elapsedTime +  moeoVRPUtils::elapsedTime(previous, current) , readyTime);
                 previous = current;
                 elapsedTime += serviceTime;
             }
@@ -207,7 +207,7 @@ public:
             {
                 current = _moeo.routes()[i][j];
                 moeoVRPUtils::getTimeWindow (current, readyTime, dueTime, serviceTime);
-                elapsedTime += std::max( moeoVRPUtils::elapsedTime(previous, current) , readyTime);
+                elapsedTime = std::max(elapsedTime +  moeoVRPUtils::elapsedTime(previous, current) , readyTime);
                 previous = current;
                 elapsedTime += serviceTime;
             }
@@ -282,7 +282,7 @@ public:
             {
                 current = _moeo.routes()[i][j];
                 moeoVRPUtils::getTimeWindow (current, readyTime, dueTime, serviceTime);
-                elapsedTime += std::max( moeoVRPUtils::elapsedTime(previous, current) , readyTime);
+                elapsedTime = std::max(elapsedTime +  moeoVRPUtils::elapsedTime(previous, current) , readyTime);
                 // Are we arriving late?
                 if (elapsedTime > dueTime)
                    delay += elapsedTime - dueTime;
