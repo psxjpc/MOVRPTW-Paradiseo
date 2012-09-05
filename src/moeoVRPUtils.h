@@ -396,7 +396,7 @@ public:
         unsigned currentCustomer, previousCustomer = 0;
 
         //  Depot closing time
- 	      double depotClosingTime = moeoVRPUtils::clients [0].dueTime, returnTripTime;
+		double depotClosingTime = moeoVRPUtils::clients [0].dueTime, returnTripTime;
 		
         for (size_t i = 1; i < this->size() - 1; i++)
         {
@@ -408,13 +408,13 @@ public:
             time = std::max(readyTime, time);
 
             // To calculate if it is feasible to go back to the depot arriving within its time window after visiting currentCustomer
-			         returnTripTime = time + moeoVRPUtils::elapsedTime (currentCustomer, 0) + serviceTime;
+			returnTripTime = time + moeoVRPUtils::elapsedTime (currentCustomer, 0) + serviceTime;
             if ((demand > vehicleCapacity) || (time > (dueTime + DELAY_MAX)) || returnTripTime  > depotClosingTime)
             {
                 this->mRoutes.push_back(route);
                 route.clear();
-				            i--;
-				            previousCustomer = 0;
+				i--;
+				previousCustomer = 0;
                 demand = 0.0;
                 time = 0.0;
             }
@@ -422,7 +422,7 @@ public:
             {
                 time += serviceTime;
                 route.push_back(currentCustomer);
-				            previousCustomer = currentCustomer;
+				previousCustomer = currentCustomer;
             }
         }
 
