@@ -45,537 +45,497 @@
  *
  */
 
-#ifndef moeoVRPUtils_h
-#define moeoVRPUtils_h
+#ifndef _moeoVRP_h
+#define _moeoVRP_h
 
-// General includes
-#include <cassert>
-#include <cstdlib>
+// For swappings elements within vectors
+#include <algorithm>
 #include <vector>
-#include <utility>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <math.h>
+
+
+// The base definition of eoVector
+#include <eoVector.h>
+
+// Utilities for the VRP-TW problem
+#include "moeoVRPUtils.h"
+
+#include <algorithm>
+#include <limits>
+
+// Infinite <double>
+// #define INFd (std::numeric_limits<double>::max)()
+#define INFd std::numeric_limits<double>::infinity()
+// Infinite <integer>
+// #define INFi (std::numeric_limits<unsigned long>::max)()
+#define INFi std::numeric_limits<long>::infinity()
+
+#include <string>
+
+// Objective Vector
+#include "moeoVRPObjectiveVectorTraits.h"
+typedef moeoRealObjectiveVector<moeoVRPObjectiveVectorTraits> moeoVRPObjectiveVector;
+
+
+// TEMP, delay max 30 min = 1800 segs
+#define DELAY_MAX 1800
+
 
 /**
-  * \def PI
-  * Guess you know what this constant represents.
+  * \class moeoVRP moeoVRP.h
+  * \brief Defines the getoype used to solve the VRP-TW problem.
+  * Objectives:
+  * - <Size of the fleet>::int is number of vehicles we need to use to satisfy all costumers.
+  * – <Travel Distance>::double is length of the route-plan.
+  * – <Travel Time>::double is elapsed time since the first delivery vehicle departs from the depot until the last arrived at the depot.
+  * – <Waiting Time>::double is the amount of time that vehicles have to wait at each costumer location.
+  * – <Delay Time>::double is the amount of time by which the arrival of the vehicles + service time is retarded respect to the closing time of the costumers.
   */
 
-#define PI                   3.14159265
-
-/**
-  * \def VEHICLE_CAPACITY
-  * Hard-coded parameter for the capacity of the vehicles. This
-  * should be parametrized in a config file in a future version.
-  */
-
-// #define VEHICLE_CAPACITY   200
-
-/**
-  * Max capacity of each vehicle within the fleet
-  */
-
-double vehicleCapacity = 200;
-
-/**
-  * Max number of usable vehicles
-  */
-
-unsigned sizeOfFleet = 0;
-
-typedef std::vector<int> Route;
-typedef std::vector< Route > Routes;
-
-
-/**
-  * \namespace moeoVRPUtils
-  * \brief A set of structures and utility functions for the VRP-TW problem.
-  */
-
-namespace moeoVRPUtils {
-
-/**
-* \var typedef struct ClientData ClientDataT.
-* \brief Renaming of struct ClientData.
-*/
-
-/**
-* \struct ClientData
-* \brief Information regarding each client in the dataset.
-* This structure is intended to be used to store the information of each
-* client read from the data file.
-*/
-
-typedef struct ClientData
+class moeoVRP: public moeoVector<moeoVRPObjectiveVector, double, double, int>
 {
-    unsigned id;            /**< Client ID number. */
-    double   x;             /**< Client's 'x' position in the map. */
-    double   y;             /**< Client's 'y' position in the map. */
-    double   demand;        /**< Client's demand of delivered product. */
-    double   readyTime;     /**< Client's beginning of the time window. */
-    double   dueTime;       /**< Client's end of the time window. */
-    double   serviceTime;   /**< Client's service time (time needed to serve the product). */
 
-} ClientDataT;
+public:
+
+    /**
+      * \brief Default constructor: initializes variables to safe values.
+      */
+
+    moeoVRP () : mLength (0.0), mTime (0.0), mDelayTime (0.0), mWaitingTime (0.0), mSizeOfFleet (0)
+    {
+
+    }
 
 
-static std::vector <ClientDataT> clients;             /**< Vector to store clients's information. */
-static std::vector <std::vector <double> > dist;      /**< Distance matrix. */
-static std::vector <std::vector <double> > time;      /**< Time matrix */
+    /**
+      * \brief Copy contructor: creates a new individual from a given one.
+      * \param _orig The individual used to create the new one.
+      */
 
-/**
-   * \brief Computes the distance between two clients.
-   * The computed distances will be stored in dist.
-   */
+    moeoVRP (const moeoVRP& _orig)
+    {
+        operator= (_orig);
+    }
 
-void computeDistances ()
-{
-    unsigned numClients = clients.size ();
 
-    dist.resize (numClients) ;
+    /**
+      * \brief Default destructor: nothing to do here.
+      */
 
-    for (unsigned i = 0; i < dist.size (); i ++)
-        dist [i].resize (numClients);
+    ~moeoVRP ()
+    {
 
-    // Distances computation
-    for (unsigned i = 0; i < dist.size (); i ++)
-        for (unsigned j = i + 1 ; j < dist.size (); j ++)
+    }
+
+
+    /**
+      * \brief Performs a copy from the invidual passed as argument.
+      * \param _orig The individual to copy from.
+      * \return A reference to this.
+      */
+
+    moeoVRP& operator= (const moeoVRP& _orig)
+    {
+
+        // Sanity check
+        if (&_orig != this)
         {
-            double distX = clients [i].x - clients [j].x;
-            double distY = clients [i].y - clients [j].y;
 
-            dist [i][j] = dist [j][i] = sqrt (distX * distX + distY * distY);
+            // Cleans both individual and decoding information
+            clean ();
 
+            // We call the assignment operator from the base class
+            moeoVector<moeoVRPObjectiveVector, double, double, int>::operator= (_orig);
+
+            // And then copy all our attributes
+            mRoutes      = _orig.mRoutes;
+            mLength      = _orig.mLength;
+            mTime        = _orig.mTime;
+            mWaitingTime = _orig.mWaitingTime;
+            mDelayTime   = _orig.mDelayTime;
+            mSizeOfFleet = _orig.mSizeOfFleet;
         }
 
-}
+        return *this;
 
-
-/**
-   * \brief Returns the time window information of a given client.
-   * \param _client The client whose information we want to know.
-   * \param _readyTime Return value. The beginning of the client's time window.
-   * \param _dueTime Return value. The end of the client's time window.
-   * \param _serviceTime Return value. The client's service time.
-   */
-
-void getTimeWindow (unsigned _client, double& _readyTime, double& _dueTime, double& _serviceTime)
-{
-    assert (_client >= 0 && _client < clients.size ());
-
-    _readyTime = clients [_client].readyTime;
-    _dueTime = clients [_client].dueTime;
-    _serviceTime = clients [_client].serviceTime;
-
-}
-
-
-/**
-   * \brief A function to get the distance between two clients.
-   * \param _from The first client.
-   * \param _to The second client.
-   * \return The distance between _from and _to.
-   */
-
-double distance (unsigned _from,  unsigned _to)
-{
-    if (!(_from >= 0 && _from < clients.size ()) || !(_to   >= 0 && _to   < clients.size ()))
-    {
-        std::cout << "_from: " << _from << " _to: " << _to << std::endl;
-        throw std::runtime_error(std::string("Safety check NOT passed!. Error: Costumer ID out of range \n - from: moeoVRPUtils::distance").c_str());
     }
 
-    return dist [_from][_to];
-}
 
-/**
-   * \brief A function to get the distance between two clients.
-   * \param _from The first client.
-   * \param _to The second client.
-   * \return The distance between _from and _to.
-   */
+    /**
+      * \brief Returns a string containing the name of the class.
+      * \return The string containing the name of the class.
+      */
 
-double elapsedTime (unsigned _from,  unsigned _to)
-{
-    assert (_from >= 0 && _from < clients.size ());
-    assert (_to   >= 0 && _to   < clients.size ());
-
-    return time [_from][_to];
-}
-
-/**
-   * \brief Computes de polar angle between clients.
-   * \param _from The first client.
-   * \param _to The second client.
-   * \return The polar angle between _from and _to.
-   */
-
-float polarAngle (unsigned _from, unsigned _to)
-{
-    assert (_from >= 0 && _from < clients.size ());
-    assert (_to   >= 0 && _to   < clients.size ());
-
-    double angle = atan2 (clients [_from].y - clients [_to].y,
-                          clients [_from].x - clients [_to].x);
-
-    // To convert it from radians to degrees
-    angle *= 180 / PI;
-
-    if (angle < 0)
-        angle *= -1;
-
-    return angle;
-
-}
-
-
-/**
-   * \brief Loads the problem distance matrix data from a given file.
-   * \param _fileName The file to load distance matrix data from.
-   * \warning No error check is performed!
-   */
-
-void loadDistanceMatrix(const char* _filename)
-{
-    //std::cout << " - Reading Distance Matrix";
-    std::ifstream file;
-    file.open(_filename);
-
-    // - Resize Distance Matrix -
-    dist.resize(clients.size());
-    for (size_t i = 0; i < dist.size(); i++)
-       dist[i].resize(clients.size());
-
-
-    for (size_t i = 0; i < dist.size(); i++)
-       for (size_t j = 0; j < dist[i].size(); j++)
-          file >> dist[i][j];
-
-    //std::cout << "...[OK]" << std::endl;
-}
-
-/**
-   * \brief Loads the problem time matrix data from a given file.
-   * \param _fileName The file to load time matrix data from.
-   * \warning No error check is performed!
-   */
-
-void loadTimeMatrix(const char* _filename)
-{
-    //std::cout << " - Reading Time Matrix";
-    std::ifstream file;
-    file.open(_filename);
-
-
-    // - Resize Time Matrix -
-    time.resize(clients.size());
-    for (size_t i = 0; i < time.size(); i++)
-       time[i].resize(clients.size());
-
-
-    for (size_t i = 0; i < time.size(); i++)
-       for (size_t j = 0; j < time[i].size(); j++)
-          file >> time[i][j];
-
-
-    //std::cout << "...[OK]" << std::endl;
-}
-
-/**
-   * \brief Loads the problem data from a given file.
-   * \param _fileName The file to load data from.
-   * \warning No error check is performed!
-   */
-
-void load (const char* _fileName)
-{
-    std::ifstream f (_fileName);
-
-    if (f)
+    virtual std::string className () const
     {
+        return "moeoVRP";
+    }
 
-        /** Reading the header of the file **/
-        std::string dummy;
-        for (int i = 1; i < 10; i++)
+
+    /**
+      * \brief Prints the individual to a given stream.
+      * \param _os The stream to print to.
+      */
+
+    void printOn (std::ostream& _os) const
+    {
+        // Then the individual itself using the base printing method
+        //moeoVector<moeoVRPObjectiveVector, double, double, int>::printOn (_os);
+        //_os << std::endl;
+        // We will use a custom method to know where each route starts and ends
+
+        // Objective values
+        _os << this->objectiveVector() << "\t";
+
+        printRoutes(_os);
+        // Using 0 as separator for each route within the route-plan
+
+    }
+
+
+    /**
+      * \brief Prints a detailed version of the individual (decoding information, unsatisfied contraints, etc.) to a given stream.
+      * \param _os The stream to print to.
+      */
+
+    void printAllOn (std::ostream& _os) const
+    {
+        // Print the individual itself using the base printing method
+        moeoVector<moeoVRPObjectiveVector, double, double, int>::printOn (_os);
+        _os << std::endl << std::endl;
+
+        // Check if we have decoding information to print
+        if (decoded ())
         {
-           // The 5th line contains the max allowed number of vehicles and capacity
-           if (i == 5)
-           {
-              f >> sizeOfFleet; // We're not going to use the max allowed num of vehicles.
-              f >> vehicleCapacity;
-           }
-           else
-              getline(f, dummy);
-        }
+            // First, we print the decoded routes (stored in mRoutes)
+            _os << " => Routes: " << std::endl << std::endl;
+            printRoutes (_os);
+            _os << std::endl << std::endl;
 
-        //std::cout << " - The max allowed capacity is " << vehicleCapacity << std::endl;
-        //std::cout << " - Size of the fleet is " << sizeOfFleet << std::endl;
-
-        ClientDataT client;
-        while (f >> client.id) {
-
-
-            f >> client.x;
-            f >> client.y;
-            f >> client.demand;
-            f >> client.readyTime;
-            f >> client.dueTime;
-            f >> client.serviceTime;
-
-            clients.push_back (client);
-
-        }
-
-        f.close ();
-    }
-    else {
-
-        std::cerr << "Error: the file: " << _fileName << " doesn't exist !!!" << std::endl ;
-        exit (1);
-
-    }
-
-}
-
-
-/**
-  * \brief Prints a route to the standard output.
-  * \param _route The route to print.
-  */
-
-void printRoute (const Route& _route)
-{
-    std::cout << "[";
-
-    for (unsigned i = 0; i < _route.size (); i++)
-    {
-        std::cout << _route [i];
-
-        if (i != _route.size () -1)
-            std::cout << ", ";
-    }
-
-    std::cout << "]";
-
-}
-
-
-/**
-  * \brief Prints a set of routes to the standard output.
-  * \param _routes The set of routes to print.
-  */
-
-void printRoutes (const Routes& _routes)
-{
-    for (unsigned i = 0; i < _routes.size (); i++)
-    {
-        std::cout << "[";
-
-        for (unsigned j = 0; j < _routes [i].size (); j++)
-        {
-            std::cout << _routes [i][j];
-
-            if (j != _routes [i].size () -1)
-                std::cout << ", ";
-        }
-
-        if (i == _routes.size () -1)
-            std::cout << "]";
-        else
-            std::cout << "]," << std::endl;
-    }
-
-    std::cout << "]" << std::endl;
-
-}
-
-
-/**
-  * \brief Swaps the position of two costumers.
-  * \param _routePlan The routePlan in which we want to swap costumers.
-  * \param _i Position of the first costumer.
-  * \param _j Position of the second costumer.
-  */
-void swap(Route& _routePlan, unsigned i, unsigned j)
-{
-    assert(_routePlan.size() > j && _routePlan.size() > i);
-    assert(i > 0 && j > 0);
-
-    int temp = _routePlan[i];
-    _routePlan[i] = _routePlan[j];
-    _routePlan[j] = temp;
-}
-
-
-/** \brief Evaluate the travel distance of a route plan
-  * \param _routePlan The route plan to calculate its length
-  * \return length of the given route plan.
-  */
-double travelDistance(const std::vector<int>& _routePlan)
-{
-    double length = 0.0;
-    for (size_t i = 1; i < _routePlan.size(); i++)
-       length += dist[_routePlan[i - 1]][_routePlan[i]];
-    return length;
-}
-
-/**
-  * \brief Checks if a routePlan is feasible in terms of capacity.
-  * \param _routePlan The route plan in which we want to swap costumers.
-  * \return <true> if is feasible and <false> otherwise.
-  */
-bool feasibleCapacity(const Route& _routePlan)
-{
-    double currentCapacity = 0.0;
-
-    for (size_t i = 1; i < _routePlan.size(); i++)
-    {
-       if (_routePlan[i] == 0)
-          currentCapacity = 0.0;
-
-       else
-       {
-          currentCapacity += clients[_routePlan[i]].demand;
-          if (currentCapacity > vehicleCapacity)
-             return false;
-       }
-    }
-    return true;
-}
-
-/**
-  * \brief Calculates the time that takes from a costumer<i> to a costumer<j>.
-  * \param _totalElapsedTime It's the travel time of a given route up to costumer<i>.
-  * \param _numberOfViolations Counts the number of violations or costumer not satisfaied within the given time.
-  * \param _i Index of the costumer the delivery vehicle departs from.
-  * \param _j Index of the costumer the delivery vehicle arrives at.
-  * \return <true> if is feasible (no costumer is served late) and <false> otherwise.
-  */
-bool elapsedTimeBetweenTwoCostumers(double& _totalElapsedTime, unsigned& _numberOfViolations, unsigned _i, unsigned _j)
-{
-
-   // Time it takes to go from <costumer i> to <costumer j>
-   _totalElapsedTime += time[_i][_j];
-
-   // Time we have to wait if we arrive before the <costumer j> opens
-   //    First, we calculate whether we're going to wait or not.
-   if (clients[_j].readyTime > _totalElapsedTime)
-      _totalElapsedTime = clients[_j].readyTime;
-   else if (clients[_j].dueTime < _totalElapsedTime)
-   {
-      _numberOfViolations++;
-      return false;
-   }
-
-   // Finally, we have to sum up the servicetime at the <costumer i>
-   _totalElapsedTime += clients[_j].serviceTime;
-   return true;
-}
-
-/**
-  * \brief Checks if a routePlan is feasible in terms of time windows.
-  * \param _routePlan The route plan to be checked.
-  * \return <true> if is feasible and <false> otherwise.
-  */
-bool feasibleTimeWindows(const Route& _routePlan)
-{
-    double _routeElapsedTime = 0;
-    unsigned _numberOfViolations = 0;
-
-    for (size_t i = 0; i < _routePlan.size() - 1; i++)
-    {
-       if (_routePlan[i] == 0)
-          _routeElapsedTime = 0;
-
-       if (!elapsedTimeBetweenTwoCostumers(_routeElapsedTime, _numberOfViolations, _routePlan[i], _routePlan[i + 1]))
-           return false;
-    }
-
-    return true;
-}
-
-bool safetyCheck(const Route& _routePlan, std::string methodName = "")
-{
-    Route costumers(dist.size(), 0);
-    unsigned numberOfCostumers = 0;
-    unsigned numberOfConsecutivesZeros = 0;
-
-    // Check for invalid values
-    for (size_t i = 0; i < _routePlan.size(); i++)
-    {
-        if (_routePlan[i] != 0)
-        {
-           if (costumers[_routePlan[i]] != 0)
-              throw std::runtime_error(std::string("Safety check NOT passed!. Error: Repeated costumer ID \n - from: " + methodName).c_str());
-           else
-           {
-              costumers[_routePlan[i]]++;
-              numberOfCostumers++;
-           }
-           // Reset the counter for consecutive zeros
-           numberOfConsecutivesZeros = 0;
+            if (this->invalid ())
+                _os << " => Fitness: INVALID." << std::endl << std::endl;
+            else
+                _os << " => Fitness: " << this->fitness () << std::endl << std::endl;
         }
         else
-        {
-           if (numberOfConsecutivesZeros > 1)
-              throw std::runtime_error(std::string("Safety check NOT passed!. Error: More than one consecutive zero - from: " + methodName).c_str());
-           numberOfConsecutivesZeros++;
-        }
-
-
-        if (int(_routePlan[i]) != _routePlan[i])
-           throw std::runtime_error(std::string("Safety check NOT passed!. Error: Costumer ID is not int \n - from: " + methodName).c_str());
-
-        if (_routePlan[i] > dist.size() || _routePlan[i] < 0)
-           throw std::runtime_error(std::string("Safety check NOT passed!. Error: Invalid costumer ID \n - from: " + methodName).c_str());
+            std::cerr << "Warning: 'printAllOn' called but the individual was not already decoded." << std::endl;
 
     }
-    // Check if all costumers are served
-    if (dist.size() - 1 != numberOfCostumers)
-       throw std::runtime_error(std::string("Safety check NOT passed!. Error: Not all costumer are served \n - from: " + methodName).c_str());
 
-    // Safety check passed!
-    return 0;
-}
+    /**
+      * \brief Write a route-plan in a file.
+      * \param _filename is the name of the file the route-plan will be written in
+      */
 
-bool safetyCheck(const std::vector<std::vector<int> >& _routePlan, std::string methodName = "")
-{
-    Route costumers(dist.size(), 0);
-    unsigned numberOfCostumers = 0;
-
-    // Are all costumers in?
-    for (size_t i = 0; i < _routePlan.size(); i++)
-        for (size_t j = 0; j < _routePlan[i].size(); j++)
+    void writeRoutePlan (std::string _filename) const
+    {
+        std::ofstream _file (_filename.c_str());
+        if (decoded ())
         {
-            costumers[_routePlan[i][j]]++;
-            numberOfCostumers++;
-
-            if (_routePlan[i][j] > dist.size() + 1 || _routePlan[i][j] < 1)
+            _file << "0";
+            for (size_t i = 0; i < mRoutes.size(); i++)
             {
-                std::cout << "Costumer ID: " << _routePlan[i][j] << " for i = " << i << " and j = "<< j << " Limit: " << dist.size() + 1 << std::endl;
-                printRoutes(_routePlan);
-                throw std::runtime_error(std::string("Safety check NOT passed!. Error: Costumer ID out of range \n - from: " + methodName).c_str());
+               for (unsigned j = 0; j < mRoutes [i].size (); j++)
+                  _file << " " << mRoutes [i][j];
+
+               _file << " 0";
+            }
+        }
+        else
+            std::cerr << "Warning: 'writeRoutePlan' called but the individual was not already decoded." << std::endl;
+
+    }
+
+    /**
+      * \brief Reads an individual from a given stream.
+      * \param _is The stream to read from.
+      */
+
+    void readFrom (std::istream& _is)
+    {
+        // Read the individual using the method from the base class
+        moeoVector<moeoVRPObjectiveVector, double, double, int>::readFrom (_is);
+    }
+
+
+    /**
+      * \brief Returns a reference to the decoded individual.
+      * \return A reference to the decoded individual.
+      */
+
+    const Routes& routes () const
+    {
+
+        if (mRoutes.size () == 0)
+            std::cerr << "Warning: This individual has not been already decoded." << std::endl;
+
+        return mRoutes;
+
+    }
+
+
+    /**
+      * \brief Aux. method to print a structure of routes.
+      * \param _os The stream to print to.
+      */
+
+    void printRoutes (std::ostream& _os) const
+    {
+        _os << "[ " << mRoutes.size() << " routes ] ";
+
+        for (unsigned i = 0; i < mRoutes.size (); i++)
+           printRoute (_os, i);
+
+        _os << "0 ";
+    }
+
+
+    /**
+      * \brief Aux. method to print only one route.
+      * \param _os The stream to print to.
+      * \param _p The route to print.
+      */
+
+    void printRoute (std::ostream& _os, unsigned _p) const
+    {
+        _os << "0 ";
+
+        for (unsigned i = 0; i < mRoutes [_p].size (); i++)
+            _os << mRoutes [_p][i] << " ";
+
+    }
+
+
+    /**
+      * \brief Cleans the individual (the vector of clients and also the decoding information).
+      * \return True if the operation finishes correctly. False otherwise.
+      */
+
+    bool clean ()
+    {
+        this->clear ();
+        mRoutes.clear ();
+        mSizeOfFleet = 0;
+        mLength = 0.0;
+        mTime = 0.0;
+        mWaitingTime = 0.0;
+        mDelayTime = 0.0;
+        return true;
+    }
+
+
+    /**
+      * \brief Invalidates the decoding information (usually after crossover or mutation).
+      * \return True if the operation finishes correctly. False otherwise.
+      */
+
+    bool cleanRoutes ()
+    {
+        mRoutes.clear ();
+        mSizeOfFleet = 0;
+        mLength = 0.0;
+        mTime = 0.0;
+        mWaitingTime = 0.0;
+        mDelayTime = 0.0;
+        return true;
+    }
+
+
+    /**
+      * \brief Has this individual been decoded?
+      * \return True if has decoding information. False otherwise.
+      */
+
+    bool decoded () const
+    {
+        if (mRoutes.size () == 0)
+            return false;
+
+        return true;
+    }
+
+
+    /**
+      * \brief Encodes an individual from a set of routes (usually used within crossover). The chromosome
+      will have the following structure:
+
+      [ Route_1 ] 0 [ Route_2 ] 0 [ Route_3 ] 0 ... 0 [ Route_n ]
+
+      * \return True if the operation finishes correctly. False otherwise.
+      */
+
+    bool encode (Routes& _routes)
+    {
+        clean ();
+
+        for (unsigned i = 0; i < _routes.size (); i++)
+            for (unsigned j = 0; j < _routes [i].size (); j++)
+                this->push_back (_routes [i][j]);
+
+        return true;
+    }
+
+
+
+    /**
+      \brief Decodes an individual for its evaluation.
+    * \return True if the operation finishes correctly. False otherwise.
+    */
+    bool decode ()
+    {
+        double demand = 0.0, time = 0.0;
+        double readyTime = 0.0, dueTime = 0.0, serviceTime = 0.0;
+
+        // Data members re-initilization
+        cleanRoutes ();
+
+        // Temp route
+        Route route;
+
+        //   We force feasibility (capacity) by splitting overloaded routes
+        //   and splitting those in which the time windows is exceeded by a maximum delay
+        unsigned currentCustomer, previousCustomer = 0;
+
+        //  Depot closing time
+ 	      double depotClosingTime = moeoVRPUtils::clients [0].dueTime, returnTripTime;
+		
+        for (size_t i = 1; i < this->size() - 1; i++)
+        {
+            currentCustomer = this->at(i);
+            demand += moeoVRPUtils::clients [currentCustomer].demand;
+
+            moeoVRPUtils::getTimeWindow (currentCustomer, readyTime, dueTime, serviceTime);
+            time += moeoVRPUtils::elapsedTime (previousCustomer, currentCustomer);
+            time = std::max(readyTime, time);
+
+            // To calculate if it is feasible to go back to the depot arriving within its time window after visiting currentCustomer
+			         returnTripTime = time + moeoVRPUtils::elapsedTime (currentCustomer, 0) + serviceTime;
+            if ((demand > vehicleCapacity) || (time > (dueTime + DELAY_MAX)) || returnTripTime  > depotClosingTime)
+            {
+                this->mRoutes.push_back(route);
+                route.clear();
+				            i--;
+				            previousCustomer = 0;
+                demand = 0.0;
+                time = 0.0;
+            }
+            else
+            {
+                time += serviceTime;
+                route.push_back(currentCustomer);
+				            previousCustomer = currentCustomer;
             }
         }
 
-    // Costumer 0 does not exist, it is the depot.
-    for (size_t i = 1; i < costumers.size(); i++)
-    {
-        if (costumers[i] != 1)
-        {
-           std::cout << "Costumer: " << i << " is being served " << costumers[i] << " times" << std::endl;
-           printRoutes(_routePlan);
-           throw std::runtime_error(std::string("Safety check NOT passed!. Error: At least a costumer is not served\n - from: " + methodName).c_str());
+        // Last route
+        if (route.size() != 0)
+           this->mRoutes.push_back(route);
 
-        }
+        #ifdef DEBUG
+            moeoVRPUtils::safetyCheck(mRoutes, "moeoVRP::decoding");
+        #endif
+
+        return true;
     }
-    // Safety check passed!
-    return 0;
-}
+
+    /**
+      * \brief Returns the number of vehicles need to satisfy all costumers in this route.
+      * \return The total number of vehicles used in this route-plan.
+      */
+    unsigned sizeOfFleet()
+    {
+        return mSizeOfFleet;
+    }
+
+    /**
+      * \brief Sets the size of the fleet
+      * \param mSizeOfFleet is the size of the fleet to be set up.
+      */
+    void sizeOfFleet(unsigned mSizeOfFleet)
+    {
+        this->mSizeOfFleet = mSizeOfFleet;
+    }
+
+    /**
+    * \brief Returns the total cost (length) of traveling all the routes.
+    * \return The total cost (length) of traveling all the routes.
+    */
+    double length ()
+    {
+        return mLength;
+    }
+
+    /**
+      * \brief Sets the lenght of the current route-plan
+      * \param mLength is the value of the length to be set up.
+      */
+    void length (double mLength)
+    {
+        this->mLength = mLength;
+    }
+
+    /**
+    * \brief Returns the total cost (travel time) of traveling all routes.
+    * \return The total cost (travel time) of traveling all routes.
+    */
+    double time()
+    {
+        return mTime;
+    }
+
+    /**
+      * \brief Sets the elapsed time of all routes.
+      * \param mTime is the elapsed time to be set up.
+      */
+    void time(double mTime)
+    {
+        this->mTime = mTime;
+    }
+
+    /**
+    * \brief Returns the total amount of time vehicles have to wait for costumer to open their time windows.
+    * \return The total amount of waiting time at all costumers.
+    */
+    double waitingTime()
+    {
+        return mWaitingTime;
+    }
+
+    /**
+    * \brief Sets the waiting time at all costumers
+    * \param mWaitingTime is the total ammount of waiting time
+    */
+    void waitingTime(double mWaitingTime)
+    {
+        this->mWaitingTime = mWaitingTime;
+    }
 
 
+    /**
+    * \brief Returns the total amount of exceed time serving costumers.
+    * \return The total delay time in all routes.
+    */
+    double delayTime()
+    {
+        return mDelayTime;
+    }
 
-}
+    /**
+      * \brief Sets the total delay time.
+      * \param mDelayTime is the value of the total delay.
+      */
+    void delayTime(double mDelayTime)
+    {
+        this->mDelayTime = mDelayTime;
+    }
+
+private:
+
+    std::vector<std::vector<int> > mRoutes;   /**< A set of routes containing the decoding information of the individual. */
+    int mSizeOfFleet;                         /**< Cached number of vehicled need to serve all costumer defined by the individual. */
+    double mLength;                           /**< Cached cost (distance) of traveling the set of routes defined by the individual. */
+    double mTime;                             /**< Cached cost (time) of traveling the set of routes defined by the individual. */
+    double mWaitingTime;                      /**< Cached of the amount of time vehicles have to wait to start serving defined by the individual. */
+    double mDelayTime;                        /**< Cached of the amount of time by which the arrival is late defined by this individual. */
+};
+
 #endif
