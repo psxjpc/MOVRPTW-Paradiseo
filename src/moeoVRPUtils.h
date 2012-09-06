@@ -398,7 +398,7 @@ public:
         //  Depot closing time
 		double depotClosingTime = moeoVRPUtils::clients [0].dueTime, returnTripTime;
 		
-        for (size_t i = 1; i < this->size() - 1; i++)
+        for (size_t i = 0; i < this->size(); i++)
         {
             currentCustomer = this->at(i);
             demand += moeoVRPUtils::clients [currentCustomer].demand;
